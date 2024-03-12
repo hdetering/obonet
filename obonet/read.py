@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def read_obo(
-    path_or_file: PathType, ignore_obsolete: bool = True, encoding: str | None = "utf-8"
+    path_or_file: PathType, ignore_obsolete: bool = True, encoding: str | None = "utf-8", relations: list[str] | None = None
 ) -> networkx.MultiDiGraph[str]:
     """
     Return a networkx.MultiDiGraph of the ontology serialized by the
@@ -33,7 +33,13 @@ def read_obo(
     encoding : str or None
         The character set encoding to use for path_or_file when path_or_file
         is a path/URL. Set to None for platform-dependent locale default.
+    relations : list[str] or None
+        A subset of relationship types to be added to the graph.
+        If None, all types of relationships will be added.
+        "is_a" will always be added.
     """
+    filter_relations = relations is not None
+
     with open_read_file(path_or_file, encoding=encoding) as obo_file:
         typedefs, terms, instances, header = get_sections(obo_file)
 
@@ -58,6 +64,8 @@ def read_obo(
 
         for relationship in term.pop("relationship", []):
             typedef, target_term = relationship.split(" ")
+            if filter_relations and typedef not in relations:
+                continue
             edge_tuple = term_id, typedef, target_term
             edge_tuples.append(edge_tuple)
 
